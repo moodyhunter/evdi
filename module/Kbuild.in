@@ -1,0 +1,8 @@
+MODNAME				?= @MODULE_NAME@
+KBUILD_VERBOSE		?= 1
+
+ccflags-y			+= -I$(src)/include -Werror @CMAKE_C_FLAGS@ -D__KERNEL__ -DMODULE -I.
+EXTRA_CFLAGS		+= @KBUILD_INCLUDE_STRING@
+
+obj-m				+= @MODULE_NAME@.o
+@MODULE_NAME@-y		+= $(patsubst %.c,%.o, $(filter %.c,@LIST_SRC_STRING@))

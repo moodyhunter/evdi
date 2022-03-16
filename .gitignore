@@ -1,3 +1,4 @@
+.cache/
 *.cmd
 *.d
 *.ko
@@ -16,6 +17,7 @@ module/evdi.mod.c
 
 site/
 tmp/
+build/
 
 checkpatch.pl
 const_structs.checkpatch
