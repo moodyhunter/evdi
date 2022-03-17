@@ -17,141 +17,146 @@
  */
 
 #include "evdi_platform_dev.h"
-#include <linux/version.h>
+
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
 #include <linux/iommu.h>
 #endif
 
-#include "evdi_platform_drv.h"
 #include "evdi_debug.h"
 #include "evdi_drm_drv.h"
+#include "evdi_platform_drv.h"
 
-struct evdi_platform_device_data {
-	struct drm_device *drm_dev;
-	struct device *parent;
-	bool symlinked;
+struct evdi_platform_device_data
+{
+    struct drm_device *drm_dev;
+    struct device *parent;
+    bool symlinked;
 };
 
 struct platform_device *evdi_platform_dev_create(struct platform_device_info *info)
 {
-	struct platform_device *platform_dev = NULL;
+    struct platform_device *platform_dev = NULL;
 
-	platform_dev = platform_device_register_full(info);
-	if (dma_set_mask(&platform_dev->dev, DMA_BIT_MASK(64))) {
-		EVDI_DEBUG("Unable to change dma mask to 64 bit. ");
-		EVDI_DEBUG("Sticking with 32 bit\n");
-	}
+    platform_dev = platform_device_register_full(info);
+    if (dma_set_mask(&platform_dev->dev, DMA_BIT_MASK(64)))
+    {
+        EVDI_DEBUG("Unable to change dma mask to 64 bit. ");
+        EVDI_DEBUG("Sticking with 32 bit\n");
+    }
 
-	EVDI_INFO("Evdi platform_device create\n");
+    EVDI_INFO("Evdi platform_device create\n");
 
-	return platform_dev;
+    return platform_dev;
 }
 
 void evdi_platform_dev_destroy(struct platform_device *dev)
 {
-	platform_device_unregister(dev);
-	EVDI_INFO("Evdi platform_device destroy\n");
+    platform_device_unregister(dev);
+    EVDI_INFO("Evdi platform_device destroy\n");
 }
 
 int evdi_platform_device_probe(struct platform_device *pdev)
 {
-	struct drm_device *dev;
-	struct evdi_platform_device_data *data;
+    struct drm_device *dev;
+    struct evdi_platform_device_data *data;
 
 #if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
 #if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
-	struct dev_iommu iommu;
+    struct dev_iommu iommu;
 #endif
 #endif
-	EVDI_CHECKPT();
+    EVDI_CHECKPT();
 
-	data = kzalloc(sizeof(struct evdi_platform_device_data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
+    data = kzalloc(sizeof(struct evdi_platform_device_data), GFP_KERNEL);
+    if (!data)
+        return -ENOMEM;
 /* Intel-IOMMU workaround: platform-bus unsupported, force ID-mapping */
 #if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
 #if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-	memset(&iommu, 0, sizeof(iommu));
-	iommu.priv = (void *)-1;
-	pdev->dev.iommu = &iommu;
+    memset(&iommu, 0, sizeof(iommu));
+    iommu.priv = (void *) -1;
+    pdev->dev.iommu = &iommu;
 #else
-#define INTEL_IOMMU_DUMMY_DOMAIN                ((void *)-1)
-	pdev->dev.archdata.iommu = INTEL_IOMMU_DUMMY_DOMAIN;
+#define INTEL_IOMMU_DUMMY_DOMAIN ((void *) -1)
+    pdev->dev.archdata.iommu = INTEL_IOMMU_DUMMY_DOMAIN;
 #endif
 #endif
 
-	dev = evdi_drm_device_create(&pdev->dev);
-	if (IS_ERR_OR_NULL(dev))
-		goto err_free;
+    dev = evdi_drm_device_create(&pdev->dev);
+    if (IS_ERR_OR_NULL(dev))
+        goto err_free;
 
-	data->drm_dev = dev;
-	data->symlinked = false;
-	platform_set_drvdata(pdev, data);
-	return PTR_ERR_OR_ZERO(dev);
+    data->drm_dev = dev;
+    data->symlinked = false;
+    platform_set_drvdata(pdev, data);
+    return PTR_ERR_OR_ZERO(dev);
 
 err_free:
-	kfree(data);
-	return PTR_ERR_OR_ZERO(dev);
+    kfree(data);
+    return PTR_ERR_OR_ZERO(dev);
 }
 
 int evdi_platform_device_remove(struct platform_device *pdev)
 {
-	struct evdi_platform_device_data *data = platform_get_drvdata(pdev);
+    struct evdi_platform_device_data *data = platform_get_drvdata(pdev);
 
-	EVDI_CHECKPT();
+    EVDI_CHECKPT();
 
-	evdi_drm_device_remove(data->drm_dev);
-	kfree(data);
-	return 0;
+    evdi_drm_device_remove(data->drm_dev);
+    kfree(data);
+    return 0;
 }
 
 bool evdi_platform_device_is_free(struct platform_device *pdev)
 {
-	struct evdi_platform_device_data *data = platform_get_drvdata(pdev);
-	struct evdi_device *evdi = data->drm_dev->dev_private;
+    struct evdi_platform_device_data *data = platform_get_drvdata(pdev);
+    struct evdi_device *evdi = data->drm_dev->dev_private;
 
-	if (evdi && !evdi_painter_is_connected(evdi->painter) &&
-	    !data->symlinked)
-		return true;
-	return false;
+    if (evdi && !evdi_painter_is_connected(evdi->painter) && !data->symlinked)
+        return true;
+    return false;
 }
 
-void evdi_platform_device_link(struct platform_device *pdev,
-				      struct device *parent)
+void evdi_platform_device_link(struct platform_device *pdev, struct device *parent)
 {
-	struct evdi_platform_device_data *data = NULL;
-	int ret = 0;
+    struct evdi_platform_device_data *data = NULL;
+    int ret = 0;
 
-	if (!parent || !pdev)
-		return;
+    if (!parent || !pdev)
+        return;
 
-	data = platform_get_drvdata(pdev);
-	if (!evdi_platform_device_is_free(pdev)) {
-		EVDI_FATAL("Device is already attached can't symlink again\n");
-		return;
-	}
+    data = platform_get_drvdata(pdev);
+    if (!evdi_platform_device_is_free(pdev))
+    {
+        EVDI_FATAL("Device is already attached can't symlink again\n");
+        return;
+    }
 
-	ret = sysfs_create_link(&pdev->dev.kobj, &parent->kobj, "device");
-	if (ret) {
-		EVDI_FATAL("Failed to create sysfs link from evdi to parent device\n");
-	} else {
-		data->symlinked = true;
-		data->parent = parent;
-	}
+    ret = sysfs_create_link(&pdev->dev.kobj, &parent->kobj, "device");
+    if (ret)
+    {
+        EVDI_FATAL("Failed to create sysfs link from evdi to parent device\n");
+    }
+    else
+    {
+        data->symlinked = true;
+        data->parent = parent;
+    }
 }
 
-void evdi_platform_device_unlink_if_linked_with(struct platform_device *pdev,
-				struct device *parent)
+void evdi_platform_device_unlink_if_linked_with(struct platform_device *pdev, struct device *parent)
 {
-	struct evdi_platform_device_data *data = platform_get_drvdata(pdev);
+    struct evdi_platform_device_data *data = platform_get_drvdata(pdev);
 
-	if (parent && data->parent == parent) {
-		sysfs_remove_link(&pdev->dev.kobj, "device");
-		data->symlinked = false;
-		data->parent = NULL;
-		EVDI_INFO("Detached from parent device\n");
-	}
+    if (parent && data->parent == parent)
+    {
+        sysfs_remove_link(&pdev->dev.kobj, "device");
+        data->symlinked = false;
+        data->parent = NULL;
+        EVDI_INFO("Detached from parent device\n");
+    }
 }

@@ -7,11 +7,12 @@
  * more details.
  */
 
+#include "evdi_params.h"
+
+#include "evdi_debug.h"
+
 #include <linux/module.h>
 #include <linux/moduleparam.h>
-
-#include "evdi_params.h"
-#include "evdi_debug.h"
 
 unsigned int evdi_loglevel __read_mostly = EVDI_LOGLEVEL_DEBUG;
 unsigned short int evdi_initial_device_count __read_mostly;
@@ -20,10 +21,8 @@ unsigned short int evdi_disable_texture_import __read_mostly;
 module_param_named(initial_loglevel, evdi_loglevel, int, 0400);
 MODULE_PARM_DESC(initial_loglevel, "Initial log level");
 
-module_param_named(initial_device_count,
-		   evdi_initial_device_count, ushort, 0644);
+module_param_named(initial_device_count, evdi_initial_device_count, ushort, 0644);
 MODULE_PARM_DESC(initial_device_count, "Initial DRM device count (default: 0)");
 
-module_param_named(disable_texture_import,
-		   evdi_disable_texture_import, ushort, 0644);
+module_param_named(disable_texture_import, evdi_disable_texture_import, ushort, 0644);
 MODULE_PARM_DESC(disable_texture_import, "Disable fast path GPU texture import (default: 0, set 1 to disable)");

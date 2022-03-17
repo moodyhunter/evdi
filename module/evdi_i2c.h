@@ -9,12 +9,10 @@
 #ifndef EVDI_I2C_H
 #define EVDI_I2C_H
 
-#include <linux/module.h>
 #include <linux/i2c.h>
+#include <linux/module.h>
 
-int evdi_i2c_add(struct i2c_adapter *adapter,
-		struct device *parent,
-		void *ddev);
+int evdi_i2c_add(struct i2c_adapter *adapter, struct device *parent, void *ddev);
 void evdi_i2c_remove(struct i2c_adapter *adapter);
 
-#endif  /* EVDI_I2C_H */
+#endif /* EVDI_I2C_H */

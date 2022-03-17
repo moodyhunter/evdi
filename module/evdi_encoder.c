@@ -16,15 +16,16 @@
 #else
 #include <drm/drmP.h>
 #endif
+#include "evdi_drm_drv.h"
+
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
-#include "evdi_drm_drv.h"
 
 /* dummy encoder */
 static void evdi_enc_destroy(struct drm_encoder *encoder)
 {
-	drm_encoder_cleanup(encoder);
-	kfree(encoder);
+    drm_encoder_cleanup(encoder);
+    kfree(encoder);
 }
 
 static void evdi_encoder_enable(__always_unused struct drm_encoder *encoder)
@@ -35,38 +36,35 @@ static void evdi_encoder_disable(__always_unused struct drm_encoder *encoder)
 {
 }
 
-static const struct drm_encoder_helper_funcs evdi_enc_helper_funcs = {
-	.enable = evdi_encoder_enable,
-	.disable = evdi_encoder_disable
-};
+static const struct drm_encoder_helper_funcs evdi_enc_helper_funcs = { .enable = evdi_encoder_enable, .disable = evdi_encoder_disable };
 
 static const struct drm_encoder_funcs evdi_enc_funcs = {
-	.destroy = evdi_enc_destroy,
+    .destroy = evdi_enc_destroy,
 };
 
 struct drm_encoder *evdi_encoder_init(struct drm_device *dev)
 {
-	struct drm_encoder *encoder;
-	int ret = 0;
+    struct drm_encoder *encoder;
+    int ret = 0;
 
-	encoder = kzalloc(sizeof(struct drm_encoder), GFP_KERNEL);
-	if (!encoder)
-		goto err;
+    encoder = kzalloc(sizeof(struct drm_encoder), GFP_KERNEL);
+    if (!encoder)
+        goto err;
 
-	ret = drm_encoder_init(dev, encoder, &evdi_enc_funcs,
-			       DRM_MODE_ENCODER_TMDS, dev_name(dev->dev));
-	if (ret) {
-		EVDI_ERROR("Failed to initialize encoder: %d\n", ret);
-		goto err_encoder;
-	}
+    ret = drm_encoder_init(dev, encoder, &evdi_enc_funcs, DRM_MODE_ENCODER_TMDS, dev_name(dev->dev));
+    if (ret)
+    {
+        EVDI_ERROR("Failed to initialize encoder: %d\n", ret);
+        goto err_encoder;
+    }
 
-	drm_encoder_helper_add(encoder, &evdi_enc_helper_funcs);
+    drm_encoder_helper_add(encoder, &evdi_enc_helper_funcs);
 
-	encoder->possible_crtcs = 1;
-	return encoder;
+    encoder->possible_crtcs = 1;
+    return encoder;
 
 err_encoder:
-	kfree(encoder);
+    kfree(encoder);
 err:
-	return NULL;
+    return NULL;
 }

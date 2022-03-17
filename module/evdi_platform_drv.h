@@ -23,9 +23,9 @@
 struct device;
 struct platform_device_info;
 
-#define DRIVER_NAME   "evdi"
-#define DRIVER_DESC   "Extensible Virtual Display Interface"
-#define DRIVER_DATE   "20220225"
+#define DRIVER_NAME "evdi"
+#define DRIVER_DESC "Extensible Virtual Display Interface"
+#define DRIVER_DATE "20220225"
 
 #define DRIVER_MAJOR 1
 #define DRIVER_MINOR 10
@@ -37,4 +37,3 @@ int evdi_platform_add_devices(struct device *device, unsigned int val);
 int evdi_platform_device_add(struct device *device, struct device *parent);
 
 #endif
-
