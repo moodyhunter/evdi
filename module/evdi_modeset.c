@@ -425,8 +425,8 @@ void evdi_modeset_init(struct evdi_device *evdi_dev)
     drm_mode_config_reset(&evdi_dev->ddev);
 }
 
-void evdi_modeset_cleanup(struct drm_device *dev)
-{
-    EVDI_CHECKPT();
-    drm_mode_config_cleanup(dev);
-}
+// void evdi_modeset_cleanup(struct drm_device *dev)
+//{
+//    EVDI_CHECKPT();
+//    drm_mode_config_cleanup(dev);
+//}

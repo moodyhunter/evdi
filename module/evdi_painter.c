@@ -15,15 +15,11 @@
 #include <drm/drm_file.h>
 #include <drm/drm_ioctl.h>
 #include <drm/drm_vblank.h>
-#elif KERNEL_VERSION(5, 5, 0) <= LINUX_VERSION_CODE || defined(EL8)
-#else
-#include <drm/drmP.h>
 #endif
 #include "evdi_cursor.h"
 #include "evdi_drm.h"
 #include "evdi_drm_drv.h"
 #include "evdi_i2c.h"
-#include "evdi_params.h"
 
 #include <drm/drm_edid.h>
 #include <linux/compiler.h>

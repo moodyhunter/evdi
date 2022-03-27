@@ -96,7 +96,7 @@ struct evdi_framebuffer
 
 /* modeset */
 void evdi_modeset_init(struct evdi_device *dev);
-void evdi_modeset_cleanup(struct drm_device *dev);
+// void evdi_modeset_cleanup(struct drm_device *dev);
 int evdi_connector_init(struct evdi_device *dev, struct drm_encoder *encoder);
 
 struct drm_encoder *evdi_encoder_init(struct evdi_device *dev);
