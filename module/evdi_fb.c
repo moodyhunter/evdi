@@ -94,7 +94,7 @@ static int evdi_handle_damage(struct evdi_framebuffer *fb, u32 x, u32 y, u32 wid
     const struct drm_clip_rect dirty_rect = { x, y, x + width, y + height };
     const struct drm_clip_rect rect = evdi_framebuffer_sanitize_rect(fb, &dirty_rect);
     struct drm_device *dev = fb->base.dev;
-    struct evdi_device *evdi = dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(dev);
 
     EVDI_CHECKPT();
 
@@ -213,88 +213,6 @@ static struct fb_ops evdifb_ops = {
     .fb_release = evdi_fb_release,
 };
 #endif /* CONFIG_FB */
-
-#if KERNEL_VERSION(5, 0, 0) <= LINUX_VERSION_CODE || defined(EL8)
-#else
-/*
- * Function taken from
- * https://lists.freedesktop.org/archives/dri-devel/2018-September/188716.html
- */
-static int evdi_user_framebuffer_dirty(struct drm_framebuffer *fb, __maybe_unused struct drm_file *file_priv, __always_unused unsigned int flags,
-                                       __always_unused unsigned int color, __always_unused struct drm_clip_rect *clips, __always_unused unsigned int num_clips)
-{
-    struct evdi_framebuffer *efb = to_evdi_fb(fb);
-    struct drm_device *dev = efb->base.dev;
-    struct evdi_device *evdi = dev->dev_private;
-
-    struct drm_modeset_acquire_ctx ctx;
-    struct drm_atomic_state *state;
-    struct drm_plane *plane;
-    int ret = 0;
-    unsigned int i;
-
-    EVDI_CHECKPT();
-
-    drm_modeset_acquire_init(&ctx,
-                             /*
-                              * When called from ioctl, we are interruptable,
-                              * but not when called internally (ie. defio worker)
-                              */
-                             file_priv ? DRM_MODESET_ACQUIRE_INTERRUPTIBLE : 0);
-
-    state = drm_atomic_state_alloc(fb->dev);
-    if (!state)
-    {
-        ret = -ENOMEM;
-        goto out;
-    }
-    state->acquire_ctx = &ctx;
-
-    for (i = 0; i < num_clips; ++i)
-        evdi_painter_mark_dirty(evdi, &clips[i]);
-
-retry:
-
-    drm_for_each_plane(plane, fb->dev)
-    {
-        struct drm_plane_state *plane_state;
-
-        if (plane->state->fb != fb)
-            continue;
-
-        /*
-         * Even if it says 'get state' this function will create and
-         * initialize state if it does not exists. We use this property
-         * to force create state.
-         */
-        plane_state = drm_atomic_get_plane_state(state, plane);
-        if (IS_ERR(plane_state))
-        {
-            ret = PTR_ERR(plane_state);
-            goto out;
-        }
-    }
-
-    ret = drm_atomic_commit(state);
-
-out:
-    if (ret == -EDEADLK)
-    {
-        drm_atomic_state_clear(state);
-        ret = drm_modeset_backoff(&ctx);
-        if (!ret)
-            goto retry;
-    }
-
-    if (state)
-        drm_atomic_state_put(state);
-
-    drm_modeset_drop_locks(&ctx);
-    drm_modeset_acquire_fini(&ctx);
-
-    return ret;
-}
-#endif
 
 static int evdi_user_framebuffer_create_handle(struct drm_framebuffer *fb, struct drm_file *file_priv, unsigned int *handle)
 {
@@ -521,7 +439,7 @@ void evdi_fbdev_cleanup(struct evdi_device *evdi)
 
 void evdi_fbdev_unplug(struct drm_device *dev)
 {
-    struct evdi_device *evdi = dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(dev);
     struct evdi_fbdev *efbdev;
 
     if (!evdi->fbdev)

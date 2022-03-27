@@ -78,7 +78,7 @@ static void evdi_crtc_atomic_flush(struct drm_crtc *crtc
 #else
     struct drm_crtc_state *crtc_state = crtc->state;
 #endif
-    struct evdi_device *evdi = crtc->dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(crtc->dev);
     bool notify_mode_changed = crtc_state->active && (crtc_state->mode_changed || evdi_painter_needs_full_modeset(evdi->painter));
     bool notify_dpms = crtc_state->active_changed || evdi_painter_needs_full_modeset(evdi->painter);
 
@@ -92,84 +92,6 @@ static void evdi_crtc_atomic_flush(struct drm_crtc *crtc
     evdi_painter_send_update_ready_if_needed(evdi->painter);
     crtc_state->event = NULL;
 }
-
-#if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE || defined(EL8)
-#else
-static void evdi_mark_full_screen_dirty(struct evdi_device *evdi)
-{
-    const struct drm_clip_rect rect = evdi_painter_framebuffer_size(evdi->painter);
-
-    evdi_painter_mark_dirty(evdi, &rect);
-    evdi_painter_send_update_ready_if_needed(evdi->painter);
-}
-
-static int evdi_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file, uint32_t handle, uint32_t width, uint32_t height, int32_t hot_x, int32_t hot_y)
-{
-    struct drm_device *dev = crtc->dev;
-    struct evdi_device *evdi = dev->dev_private;
-    struct drm_gem_object *obj = NULL;
-    struct evdi_gem_object *eobj = NULL;
-    /*
-     * evdi_crtc_cursor_set is callback function using
-     * deprecated cursor entry point.
-     * There is no info about underlaying pixel format.
-     * Hence we are assuming that it is in ARGB 32bpp format.
-     * This format it the only one supported in cursor composition
-     * function.
-     * This format is also enforced during framebuffer creation.
-     *
-     * Proper format will be available when driver start support
-     * universal planes for cursor.
-     */
-    uint32_t format = DRM_FORMAT_ARGB8888;
-    uint32_t stride = 4 * width;
-
-    EVDI_CHECKPT();
-    if (handle)
-    {
-        mutex_lock(&dev->struct_mutex);
-        obj = drm_gem_object_lookup(file, handle);
-        if (obj)
-            eobj = to_evdi_bo(obj);
-        else
-            EVDI_ERROR("Failed to lookup gem object.\n");
-        mutex_unlock(&dev->struct_mutex);
-    }
-
-    evdi_cursor_set(evdi->cursor, eobj, width, height, hot_x, hot_y, format, stride);
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-    drm_gem_object_put(obj);
-#else
-    drm_gem_object_put_unlocked(obj);
-#endif
-
-    /*
-     * For now we don't care whether the application wanted the mouse set,
-     * or not.
-     */
-    if (evdi->cursor_events_enabled)
-        evdi_painter_send_cursor_set(evdi->painter, evdi->cursor);
-    else
-        evdi_mark_full_screen_dirty(evdi);
-    return 0;
-}
-
-static int evdi_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
-{
-    struct drm_device *dev = crtc->dev;
-    struct evdi_device *evdi = dev->dev_private;
-
-    EVDI_CHECKPT();
-    evdi_cursor_move(evdi->cursor, x, y);
-
-    if (evdi->cursor_events_enabled)
-        evdi_painter_send_cursor_move(evdi->painter, evdi->cursor);
-    else
-        evdi_mark_full_screen_dirty(evdi);
-
-    return 0;
-}
-#endif
 
 static struct drm_crtc_helper_funcs evdi_helper_funcs = { .mode_set_nofb = evdi_crtc_set_nofb,
                                                           .atomic_flush = evdi_crtc_atomic_flush,
@@ -237,14 +159,14 @@ static void evdi_plane_atomic_update(struct drm_plane *plane,
         return;
     }
 
-    if (!plane->dev || !plane->dev->dev_private)
+    if (!plane->dev || !dev_to_evdi(plane->dev))
     {
         EVDI_WARN("Plane device is null\n");
         return;
     }
 
     state = plane->state;
-    evdi = plane->dev->dev_private;
+    evdi = dev_to_evdi(plane->dev);
     painter = evdi->painter;
     crtc = state->crtc;
 
@@ -316,10 +238,10 @@ static void evdi_cursor_atomic_update(struct drm_plane *plane,
     struct drm_plane_state *old_state = drm_atomic_get_old_plane_state(atom_state, plane);
 #else
 #endif
-    if (plane && plane->state && plane->dev && plane->dev->dev_private)
+    if (plane && plane->state && plane->dev && dev_to_evdi(plane->dev))
     {
         struct drm_plane_state *state = plane->state;
-        struct evdi_device *evdi = plane->dev->dev_private;
+        struct evdi_device *evdi = dev_to_evdi(plane->dev);
         struct drm_framebuffer *fb = state->fb;
         struct evdi_framebuffer *efb = to_evdi_fb(fb);
 

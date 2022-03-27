@@ -30,7 +30,7 @@
 
 static int evdi_get_modes(struct drm_connector *connector)
 {
-    struct evdi_device *evdi = connector->dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(connector->dev);
     struct edid *edid = NULL;
     int ret = 0;
 
@@ -68,7 +68,7 @@ err:
 
 static enum drm_mode_status evdi_mode_valid(struct drm_connector *connector, struct drm_display_mode *mode)
 {
-    struct evdi_device *evdi = connector->dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(connector->dev);
     uint32_t mode_area = mode->hdisplay * mode->vdisplay;
 
     if (evdi->sku_area_limit == 0)
@@ -85,7 +85,7 @@ static enum drm_mode_status evdi_mode_valid(struct drm_connector *connector, str
 
 static enum drm_connector_status evdi_detect(struct drm_connector *connector, __always_unused bool force)
 {
-    struct evdi_device *evdi = connector->dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(connector->dev);
 
     EVDI_CHECKPT();
     if (evdi_painter_is_connected(evdi->painter))

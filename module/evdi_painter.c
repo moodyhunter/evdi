@@ -949,7 +949,7 @@ void evdi_painter_close(struct evdi_device *evdi, struct drm_file *file)
 
 int evdi_painter_connect_ioctl(struct drm_device *drm_dev, void *data, struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
     struct evdi_painter *painter = evdi->painter;
     struct drm_evdi_connect *cmd = data;
     int ret;
@@ -974,7 +974,7 @@ int evdi_painter_connect_ioctl(struct drm_device *drm_dev, void *data, struct dr
 
 int evdi_painter_grabpix_ioctl(struct drm_device *drm_dev, void *data, __always_unused struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
     struct evdi_painter *painter = evdi->painter;
     struct drm_evdi_grabpix *cmd = data;
     struct evdi_framebuffer *efb = NULL;
@@ -1105,7 +1105,7 @@ err_painter:
 
 int evdi_painter_request_update_ioctl(struct drm_device *drm_dev, __always_unused void *data, __always_unused struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
     struct evdi_painter *painter = evdi->painter;
     int result = 0;
 
@@ -1296,7 +1296,7 @@ bool evdi_painter_i2c_data_notify(struct evdi_painter *painter, struct i2c_msg *
 
 int evdi_painter_ddcci_response_ioctl(struct drm_device *drm_dev, void *data, __always_unused struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
     struct evdi_painter *painter = evdi->painter;
     struct drm_evdi_ddcci_response *cmd = data;
     int result = 0;
@@ -1333,7 +1333,7 @@ unlock:
 
 int evdi_painter_enable_cursor_events_ioctl(struct drm_device *drm_dev, void *data, __always_unused struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
     struct drm_evdi_enable_cursor_events *cmd = data;
 
     evdi->cursor_events_enabled = cmd->enable;

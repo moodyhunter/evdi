@@ -63,11 +63,11 @@ int evdi_platform_device_probe(struct platform_device *pdev)
     struct evdi_device *evdi_dev;
     struct evdi_platform_device_data *data;
 
-//#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-//#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
-//    struct dev_iommu iommu;
-//#endif
-//#endif
+    //#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
+    //#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
+    //    struct dev_iommu iommu;
+    //#endif
+    //#endif
     EVDI_CHECKPT();
 
     data = kzalloc(sizeof(struct evdi_platform_device_data), GFP_KERNEL);
@@ -116,7 +116,7 @@ int evdi_platform_device_remove(struct platform_device *pdev)
 bool evdi_platform_device_is_free(struct platform_device *pdev)
 {
     struct evdi_platform_device_data *data = platform_get_drvdata(pdev);
-    struct evdi_device *evdi = data->drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(data->drm_dev);
 
     if (evdi && !evdi_painter_is_connected(evdi->painter) && !data->symlinked)
         return true;
