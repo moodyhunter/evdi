@@ -73,17 +73,20 @@ int evdi_platform_device_probe(struct platform_device *pdev)
     data = kzalloc(sizeof(struct evdi_platform_device_data), GFP_KERNEL);
     if (!data)
         return -ENOMEM;
-/* Intel-IOMMU workaround: platform-bus unsupported, force ID-mapping */
-#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-    memset(&iommu, 0, sizeof(iommu));
-    iommu.priv = (void *) -1;
-    pdev->dev.iommu = &iommu;
-#else
-#define INTEL_IOMMU_DUMMY_DOMAIN ((void *) -1)
-    pdev->evdi_dev.archdata.iommu = INTEL_IOMMU_DUMMY_DOMAIN;
-#endif
-#endif
+
+    /* Intel-IOMMU workaround: platform-bus unsupported, force ID-mapping */
+
+    /*
+     * This is because the intel-iommu driver only supports PCI bus / devices, therefore it is not (yet) possible to properly allocate and attach iommu
+     * group/domain and attach devices with no pci parent devices.
+     */
+    
+    //
+    //#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
+    //    memset(&iommu, 0, sizeof(iommu));
+    //    iommu.priv = (void *) -1;
+    //    pdev->dev.iommu = &iommu;
+    //#endif
 
     evdi_dev = evdi_drm_device_create(&pdev->dev);
     if (IS_ERR_OR_NULL(evdi_dev))
