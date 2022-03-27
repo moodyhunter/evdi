@@ -63,11 +63,11 @@ int evdi_platform_device_probe(struct platform_device *pdev)
     struct evdi_device *evdi_dev;
     struct evdi_platform_device_data *data;
 
-#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
-#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
-    struct dev_iommu iommu;
-#endif
-#endif
+//#if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
+//#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
+//    struct dev_iommu iommu;
+//#endif
+//#endif
     EVDI_CHECKPT();
 
     data = kzalloc(sizeof(struct evdi_platform_device_data), GFP_KERNEL);
@@ -80,7 +80,7 @@ int evdi_platform_device_probe(struct platform_device *pdev)
      * This is because the intel-iommu driver only supports PCI bus / devices, therefore it is not (yet) possible to properly allocate and attach iommu
      * group/domain and attach devices with no pci parent devices.
      */
-    
+
     //
     //#if IS_ENABLED(CONFIG_IOMMU_API) && defined(CONFIG_INTEL_IOMMU)
     //    memset(&iommu, 0, sizeof(iommu));
