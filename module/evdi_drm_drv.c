@@ -102,9 +102,9 @@ void evdi_driver_unload(struct drm_device *dev)
 #ifdef CONFIG_FB
     evdi_fbdev_cleanup(evdi);
 #endif /* CONFIG_FB */
-    //    evdi_modeset_cleanup(dev);
+       //    evdi_modeset_cleanup(dev);
 
-    //    kfree(evdi);
+    kfree(evdi);
 }
 
 int evdi_driver_open(struct drm_device *drm_dev, __always_unused struct drm_file *file)
