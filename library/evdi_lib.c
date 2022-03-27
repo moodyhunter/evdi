@@ -237,128 +237,128 @@ static int device_exists(int device)
     return path_exists(dev);
 }
 
-//static int does_path_links_to(const char *link, const char *substr)
+// static int does_path_links_to(const char *link, const char *substr)
 //{
-//    char real_path[PATH_MAX];
-//    ssize_t r;
+//     char real_path[PATH_MAX];
+//     ssize_t r;
 //
-//    r = readlink(link, real_path, sizeof(real_path));
-//    if (r < 0)
-//        return 0;
-//    real_path[r] = '\0';
+//     r = readlink(link, real_path, sizeof(real_path));
+//     if (r < 0)
+//         return 0;
+//     real_path[r] = '\0';
 //
-//    return (strstr(real_path, substr) != NULL);
-//}
+//     return (strstr(real_path, substr) != NULL);
+// }
 
-//static int process_opened_device(const char *pid, const char *device_file_path)
+// static int process_opened_device(const char *pid, const char *device_file_path)
 //{
-//    char maps_path[PATH_MAX];
-//    FILE *maps = NULL;
-//    char line[BUFSIZ];
-//    int result = 0;
+//     char maps_path[PATH_MAX];
+//     FILE *maps = NULL;
+//     char line[BUFSIZ];
+//     int result = 0;
 //
-//    snprintf(maps_path, PATH_MAX, "/proc/%s/maps", pid);
+//     snprintf(maps_path, PATH_MAX, "/proc/%s/maps", pid);
 //
-//    maps = fopen(maps_path, "r");
-//    if (maps == NULL)
-//        return 0;
+//     maps = fopen(maps_path, "r");
+//     if (maps == NULL)
+//         return 0;
 //
-//    while (fgets(line, BUFSIZ, maps))
-//    {
-//        if (strstr(line, device_file_path))
-//        {
-//            result = 1;
-//            break;
-//        }
-//    }
+//     while (fgets(line, BUFSIZ, maps))
+//     {
+//         if (strstr(line, device_file_path))
+//         {
+//             result = 1;
+//             break;
+//         }
+//     }
 //
-//    fclose(maps);
-//    return result;
-//}
+//     fclose(maps);
+//     return result;
+// }
 
-//static int process_opened_files(const char *pid, const char *device_file_path)
+// static int process_opened_files(const char *pid, const char *device_file_path)
 //{
-//    char fd_path[PATH_MAX];
-//    DIR *fd_dir;
-//    struct dirent *fd_entry;
-//    int result = 0;
+//     char fd_path[PATH_MAX];
+//     DIR *fd_dir;
+//     struct dirent *fd_entry;
+//     int result = 0;
 //
-//    snprintf(fd_path, PATH_MAX, "/proc/%s/fd", pid);
+//     snprintf(fd_path, PATH_MAX, "/proc/%s/fd", pid);
 //
-//    fd_dir = opendir(fd_path);
-//    if (fd_dir == NULL)
-//        return 0;
+//     fd_dir = opendir(fd_path);
+//     if (fd_dir == NULL)
+//         return 0;
 //
-//    while ((fd_entry = readdir(fd_dir)) != NULL)
-//    {
-//        char *d_name = fd_entry->d_name;
-//        char path[PATH_MAX];
+//     while ((fd_entry = readdir(fd_dir)) != NULL)
+//     {
+//         char *d_name = fd_entry->d_name;
+//         char path[PATH_MAX];
 //
-//        snprintf(path, PATH_MAX, "/proc/%s/fd/%s", pid, d_name);
+//         snprintf(path, PATH_MAX, "/proc/%s/fd/%s", pid, d_name);
 //
-//        if (does_path_links_to(path, device_file_path))
-//        {
-//            result = 1;
-//            break;
-//        }
-//    }
+//         if (does_path_links_to(path, device_file_path))
+//         {
+//             result = 1;
+//             break;
+//         }
+//     }
 //
-//    closedir(fd_dir);
-//    return result;
-//}
+//     closedir(fd_dir);
+//     return result;
+// }
 
-//static int device_has_master(const char *device_file_path)
+// static int device_has_master(const char *device_file_path)
 //{
-//    pid_t myself = getpid();
-//    DIR *proc_dir;
-//    struct dirent *proc_entry;
-//    int result = 0;
+//     pid_t myself = getpid();
+//     DIR *proc_dir;
+//     struct dirent *proc_entry;
+//     int result = 0;
 //
-//    proc_dir = opendir("/proc");
-//    if (proc_dir == NULL)
-//        return 0;
+//     proc_dir = opendir("/proc");
+//     if (proc_dir == NULL)
+//         return 0;
 //
-//    while ((proc_entry = readdir(proc_dir)) != NULL)
-//    {
-//        char *d_name = proc_entry->d_name;
+//     while ((proc_entry = readdir(proc_dir)) != NULL)
+//     {
+//         char *d_name = proc_entry->d_name;
 //
-//        if (d_name[0] < '0' || d_name[0] > '9' || myself == atoi(d_name))
-//        {
-//            continue;
-//        }
+//         if (d_name[0] < '0' || d_name[0] > '9' || myself == atoi(d_name))
+//         {
+//             continue;
+//         }
 //
-//        if (process_opened_files(d_name, device_file_path))
-//        {
-//            result = 1;
-//            break;
-//        }
+//         if (process_opened_files(d_name, device_file_path))
+//         {
+//             result = 1;
+//             break;
+//         }
 //
-//        if (process_opened_device(d_name, device_file_path))
-//        {
-//            result = 1;
-//            break;
-//        }
-//    }
+//         if (process_opened_device(d_name, device_file_path))
+//         {
+//             result = 1;
+//             break;
+//         }
+//     }
 //
-//    closedir(proc_dir);
-//    return result;
-//}
+//     closedir(proc_dir);
+//     return result;
+// }
 
-//static void wait_for_master(const char *device_path)
+// static void wait_for_master(const char *device_path)
 //{
-//    const unsigned int TOTAL_WAIT_US = 5000000L;
-//    const unsigned int SLEEP_INTERVAL_US = 100000L;
+//     const unsigned int TOTAL_WAIT_US = 5000000L;
+//     const unsigned int SLEEP_INTERVAL_US = 100000L;
 //
-//    unsigned int cnt = TOTAL_WAIT_US / SLEEP_INTERVAL_US;
+//     unsigned int cnt = TOTAL_WAIT_US / SLEEP_INTERVAL_US;
 //
-//    int has_master = 0;
+//     int has_master = 0;
 //
-//    while ((has_master = device_has_master(device_path)) == 0 && cnt--)
-//        usleep(SLEEP_INTERVAL_US);
+//     while ((has_master = device_has_master(device_path)) == 0 && cnt--)
+//         usleep(SLEEP_INTERVAL_US);
 //
-//    if (!has_master)
-//        evdi_log("Wait for master timed out");
-//}
+//     if (!has_master)
+//         evdi_log("Wait for master timed out");
+// }
 
 static int open_as_slave(const char *device_path)
 {
@@ -418,7 +418,7 @@ static int open_device(int device)
     snprintf(dev, PATH_MAX, "/dev/dri/card%d", device);
 
 #ifndef CHROMEOS
-    //wait_for_master(dev);
+    // wait_for_master(dev);
 #endif
 
     fd = wait_for_device(dev);
