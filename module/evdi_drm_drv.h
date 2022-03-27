@@ -46,7 +46,7 @@ struct evdi_painter;
 
 struct evdi_device
 {
-    struct drm_device *ddev;
+    struct drm_device ddev;
     struct drm_connector *conn;
     struct evdi_cursor *cursor;
     bool cursor_events_enabled;
@@ -59,6 +59,8 @@ struct evdi_device
 
     int dev_index;
 };
+
+#define dev_to_evdi(x) container_of(x, struct evdi_device, ddev)
 
 struct evdi_gem_object
 {
@@ -93,11 +95,11 @@ struct evdi_framebuffer
 #define to_evdi_fb(x) container_of(x, struct evdi_framebuffer, base)
 
 /* modeset */
-void evdi_modeset_init(struct drm_device *dev);
+void evdi_modeset_init(struct evdi_device *dev);
 void evdi_modeset_cleanup(struct drm_device *dev);
-int evdi_connector_init(struct drm_device *dev, struct drm_encoder *encoder);
+int evdi_connector_init(struct evdi_device *dev, struct drm_encoder *encoder);
 
-struct drm_encoder *evdi_encoder_init(struct drm_device *dev);
+struct drm_encoder *evdi_encoder_init(struct evdi_device *dev);
 
 int evdi_driver_load(struct drm_device *dev, unsigned long flags);
 void evdi_driver_unload(struct drm_device *dev);
@@ -110,8 +112,8 @@ long evdi_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 #endif
 
 #ifdef CONFIG_FB
-int evdi_fbdev_init(struct drm_device *dev);
-void evdi_fbdev_cleanup(struct drm_device *dev);
+int evdi_fbdev_init(struct evdi_device *dev);
+void evdi_fbdev_cleanup(struct evdi_device *dev);
 void evdi_fbdev_unplug(struct drm_device *dev);
 #endif /* CONFIG_FB */
 struct drm_framebuffer *evdi_fb_user_fb_create(struct drm_device *dev, struct drm_file *file, const struct drm_mode_fb_cmd2 *mode_cmd);
@@ -160,7 +162,7 @@ void evdi_painter_set_scanout_buffer(struct evdi_painter *painter, struct evdi_f
 
 struct drm_clip_rect evdi_framebuffer_sanitize_rect(const struct evdi_framebuffer *fb, const struct drm_clip_rect *rect);
 
-struct drm_device *evdi_drm_device_create(struct device *parent);
+struct evdi_device *evdi_drm_device_create(struct device *parent);
 int evdi_drm_device_remove(struct drm_device *dev);
 
 void evdi_painter_send_cursor_set(struct evdi_painter *painter, struct evdi_cursor *cursor);

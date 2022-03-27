@@ -164,7 +164,8 @@ static inline uint32_t blend_alpha(const uint32_t pixel_val32, uint32_t blend_va
 {
     uint32_t alpha = (blend_val32 >> 24);
 
-    return blend_component(pixel_val32 & 0xff, blend_val32 & 0xff, alpha) | blend_component((pixel_val32 & 0xff00) >> 8, (blend_val32 & 0xff00) >> 8, alpha) << 8 |
+    return blend_component(pixel_val32 & 0xff, blend_val32 & 0xff, alpha) |                        //
+           blend_component((pixel_val32 & 0xff00) >> 8, (blend_val32 & 0xff00) >> 8, alpha) << 8 | //
            blend_component((pixel_val32 & 0xff0000) >> 16, (blend_val32 & 0xff0000) >> 16, alpha) << 16;
 }
 

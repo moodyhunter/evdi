@@ -409,7 +409,7 @@ static const uint32_t formats[] = {
     DRM_FORMAT_ABGR8888,
 };
 
-static struct drm_plane *evdi_create_plane(struct drm_device *dev, enum drm_plane_type type, const struct drm_plane_helper_funcs *helper_funcs)
+static struct drm_plane *evdi_create_plane(struct evdi_device *dev, enum drm_plane_type type, const struct drm_plane_helper_funcs *helper_funcs)
 {
     struct drm_plane *plane;
     int ret;
@@ -423,7 +423,7 @@ static struct drm_plane *evdi_create_plane(struct drm_device *dev, enum drm_plan
     }
     plane->format_default = true;
 
-    ret = drm_universal_plane_init(dev, plane, 0xFF, &evdi_plane_funcs, formats, ARRAY_SIZE(formats), NULL, type, NULL);
+    ret = drm_universal_plane_init(&dev->ddev, plane, 0xFF, &evdi_plane_funcs, formats, ARRAY_SIZE(formats), NULL, type, NULL);
 
     if (ret)
     {
@@ -437,7 +437,7 @@ static struct drm_plane *evdi_create_plane(struct drm_device *dev, enum drm_plan
     return plane;
 }
 
-static int evdi_crtc_init(struct drm_device *dev)
+static int evdi_crtc_init(struct evdi_device *dev)
 {
     struct drm_crtc *crtc = NULL;
     struct drm_plane *primary_plane = NULL;
@@ -459,7 +459,7 @@ static int evdi_crtc_init(struct drm_device *dev)
     drm_plane_enable_fb_damage_clips(primary_plane);
 #endif
 
-    status = drm_crtc_init_with_planes(dev, crtc, primary_plane, cursor_plane, &evdi_crtc_funcs, NULL);
+    status = drm_crtc_init_with_planes(&dev->ddev, crtc, primary_plane, cursor_plane, &evdi_crtc_funcs, NULL);
 
     EVDI_DEBUG("drm_crtc_init: %d p%p\n", status, primary_plane);
     drm_crtc_helper_add(crtc, &evdi_helper_funcs);
@@ -472,32 +472,35 @@ static const struct drm_mode_config_funcs evdi_mode_funcs = { .fb_create = evdi_
                                                               .atomic_commit = drm_atomic_helper_commit,
                                                               .atomic_check = drm_atomic_helper_check };
 
-void evdi_modeset_init(struct drm_device *dev)
+void evdi_modeset_init(struct evdi_device *evdi_dev)
 {
+    int ret;
     struct drm_encoder *encoder;
 
     EVDI_CHECKPT();
 
-    drm_mode_config_init(dev);
+    ret = drmm_mode_config_init(&evdi_dev->ddev);
+    if (ret < 0)
+        pr_crit("WERID: drmm_mode_config_init returned %d", ret);
 
-    dev->mode_config.min_width = 64;
-    dev->mode_config.min_height = 64;
+    evdi_dev->ddev.mode_config.min_width = 64;
+    evdi_dev->ddev.mode_config.min_height = 64;
 
-    dev->mode_config.max_width = 7680;
-    dev->mode_config.max_height = 4320;
+    evdi_dev->ddev.mode_config.max_width = 7680;
+    evdi_dev->ddev.mode_config.max_height = 4320;
 
-    dev->mode_config.prefer_shadow = 0;
-    dev->mode_config.preferred_depth = 24;
+    evdi_dev->ddev.mode_config.prefer_shadow = 0;
+    evdi_dev->ddev.mode_config.preferred_depth = 24;
 
-    dev->mode_config.funcs = &evdi_mode_funcs;
+    evdi_dev->ddev.mode_config.funcs = &evdi_mode_funcs;
 
-    evdi_crtc_init(dev);
+    evdi_crtc_init(evdi_dev);
 
-    encoder = evdi_encoder_init(dev);
+    encoder = evdi_encoder_init(evdi_dev);
 
-    evdi_connector_init(dev, encoder);
+    evdi_connector_init(evdi_dev, encoder);
 
-    drm_mode_config_reset(dev);
+    drm_mode_config_reset(&evdi_dev->ddev);
 }
 
 void evdi_modeset_cleanup(struct drm_device *dev)

@@ -89,7 +89,7 @@ struct drm_clip_rect evdi_framebuffer_sanitize_rect(const struct evdi_framebuffe
 }
 
 #ifdef CONFIG_FB
-static int evdi_handle_damage(struct evdi_framebuffer *fb, int x, int y, int width, int height)
+static int evdi_handle_damage(struct evdi_framebuffer *fb, u32 x, u32 y, u32 width, u32 height)
 {
     const struct drm_clip_rect dirty_rect = { x, y, x + width, y + height };
     const struct drm_clip_rect rect = evdi_framebuffer_sanitize_rect(fb, &dirty_rect);
@@ -441,7 +441,7 @@ static struct drm_fb_helper_funcs evdi_fb_helper_funcs = {
     .fb_probe = evdifb_create,
 };
 
-static void evdi_fbdev_destroy(__always_unused struct drm_device *dev, struct evdi_fbdev *efbdev)
+static void evdi_fbdev_destroy(__always_unused struct evdi_device *dev, struct evdi_fbdev *efbdev)
 {
     struct fb_info *info;
 
@@ -467,27 +467,25 @@ static void evdi_fbdev_destroy(__always_unused struct drm_device *dev, struct ev
     }
 }
 
-int evdi_fbdev_init(struct drm_device *dev)
+int evdi_fbdev_init(struct evdi_device *evdi)
 {
-    struct evdi_device *evdi;
     struct evdi_fbdev *efbdev;
     int ret;
+    pr_warn("moody: evdi_fbdev_init called.");
 
-    evdi = dev->dev_private;
     efbdev = kzalloc(sizeof(struct evdi_fbdev), GFP_KERNEL);
     if (!efbdev)
         return -ENOMEM;
 
+    pr_warn("moody: 1");
     evdi->fbdev = efbdev;
-    drm_fb_helper_prepare(dev, &efbdev->helper, &evdi_fb_helper_funcs);
+    drm_fb_helper_prepare(&evdi->ddev, &efbdev->helper, &evdi_fb_helper_funcs);
 
-#if KERNEL_VERSION(5, 7, 0) <= LINUX_VERSION_CODE || defined(EL8)
-    ret = drm_fb_helper_init(dev, &efbdev->helper);
-#else
-    ret = drm_fb_helper_init(dev, &efbdev->helper, 1);
-#endif
+    pr_warn("moody: 2");
+    ret = drm_fb_helper_init(&evdi->ddev, &efbdev->helper);
     if (ret)
     {
+        pr_warn("moody: 3");
         kfree(efbdev);
         return ret;
     }
@@ -497,23 +495,26 @@ int evdi_fbdev_init(struct drm_device *dev)
     drm_fb_helper_single_add_all_connectors(&efbdev->helper);
 #endif
 
+    pr_warn("moody: 4");
     ret = drm_fb_helper_initial_config(&efbdev->helper, 32);
     if (ret)
     {
+        pr_warn("moody: 5");
         drm_fb_helper_fini(&efbdev->helper);
         kfree(efbdev);
     }
+    pr_warn("moody: shit");
     return ret;
 }
 
-void evdi_fbdev_cleanup(struct drm_device *dev)
+void evdi_fbdev_cleanup(struct evdi_device *evdi)
 {
-    struct evdi_device *evdi = dev->dev_private;
+    pr_warn("moody: evdi_fbdev_cleanup called.");
 
     if (!evdi->fbdev)
         return;
 
-    evdi_fbdev_destroy(dev, evdi->fbdev);
+    evdi_fbdev_destroy(evdi, evdi->fbdev);
     kfree(evdi->fbdev);
     evdi->fbdev = NULL;
 }

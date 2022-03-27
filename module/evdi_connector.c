@@ -38,6 +38,7 @@ static int evdi_get_modes(struct drm_connector *connector)
 
     if (!edid)
     {
+        pr_warn("moody: updating edid");
 #if KERNEL_VERSION(4, 19, 0) <= LINUX_VERSION_CODE || defined(EL8)
         drm_connector_update_edid_property(connector, NULL);
 #else
@@ -110,6 +111,7 @@ static struct drm_encoder *evdi_best_encoder(struct drm_connector *connector)
 
     drm_connector_for_each_possible_encoder(connector, encoder)
     {
+        pr_warn("moody: drm_connector_for_each_possible_encoder: %s", encoder->name);
         return encoder;
     }
 
@@ -132,23 +134,22 @@ static const struct drm_connector_funcs evdi_connector_funcs = { .detect = evdi_
                                                                  .atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
                                                                  .atomic_destroy_state = drm_atomic_helper_connector_destroy_state };
 
-int evdi_connector_init(struct drm_device *dev, struct drm_encoder *encoder)
+int evdi_connector_init(struct evdi_device *dev, struct drm_encoder *encoder)
 {
     struct drm_connector *connector;
-    struct evdi_device *evdi = dev->dev_private;
 
     connector = kzalloc(sizeof(struct drm_connector), GFP_KERNEL);
     if (!connector)
         return -ENOMEM;
 
     /* TODO: Initialize connector with actual connector type */
-    drm_connector_init(dev, connector, &evdi_connector_funcs, DRM_MODE_CONNECTOR_DVII);
+    drm_connector_init(&dev->ddev, connector, &evdi_connector_funcs, DRM_MODE_CONNECTOR_DVII);
     drm_connector_helper_add(connector, &evdi_connector_helper_funcs);
     connector->polled = DRM_CONNECTOR_POLL_HPD;
 
     drm_connector_register(connector);
 
-    evdi->conn = connector;
+    dev->conn = connector;
 
 #if KERNEL_VERSION(4, 19, 0) <= LINUX_VERSION_CODE || defined(EL8)
     drm_connector_attach_encoder(connector, encoder);

@@ -28,7 +28,6 @@
 
 #include "evdi_debug.h"
 #include "evdi_drm_drv.h"
-#include "evdi_platform_drv.h"
 
 struct evdi_platform_device_data
 {
@@ -61,7 +60,7 @@ void evdi_platform_dev_destroy(struct platform_device *dev)
 
 int evdi_platform_device_probe(struct platform_device *pdev)
 {
-    struct drm_device *dev;
+    struct evdi_device *evdi_dev;
     struct evdi_platform_device_data *data;
 
 #if KERNEL_VERSION(5, 9, 0) <= LINUX_VERSION_CODE || defined(EL8)
@@ -82,22 +81,22 @@ int evdi_platform_device_probe(struct platform_device *pdev)
     pdev->dev.iommu = &iommu;
 #else
 #define INTEL_IOMMU_DUMMY_DOMAIN ((void *) -1)
-    pdev->dev.archdata.iommu = INTEL_IOMMU_DUMMY_DOMAIN;
+    pdev->evdi_dev.archdata.iommu = INTEL_IOMMU_DUMMY_DOMAIN;
 #endif
 #endif
 
-    dev = evdi_drm_device_create(&pdev->dev);
-    if (IS_ERR_OR_NULL(dev))
+    evdi_dev = evdi_drm_device_create(&pdev->dev);
+    if (IS_ERR_OR_NULL(evdi_dev))
         goto err_free;
 
-    data->drm_dev = dev;
+    data->drm_dev = &evdi_dev->ddev;
     data->symlinked = false;
     platform_set_drvdata(pdev, data);
-    return PTR_ERR_OR_ZERO(dev);
+    return PTR_ERR_OR_ZERO(evdi_dev);
 
 err_free:
     kfree(data);
-    return PTR_ERR_OR_ZERO(dev);
+    return PTR_ERR_OR_ZERO(evdi_dev);
 }
 
 int evdi_platform_device_remove(struct platform_device *pdev)
@@ -124,7 +123,7 @@ bool evdi_platform_device_is_free(struct platform_device *pdev)
 void evdi_platform_device_link(struct platform_device *pdev, struct device *parent)
 {
     struct evdi_platform_device_data *data = NULL;
-    int ret = 0;
+    int ret;
 
     if (!parent || !pdev)
         return;

@@ -28,11 +28,11 @@
 static struct drm_driver driver;
 
 struct drm_ioctl_desc evdi_painter_ioctls[] = {
-    DRM_IOCTL_DEF_DRV(EVDI_CONNECT, evdi_painter_connect_ioctl, DRM_UNLOCKED),
-    DRM_IOCTL_DEF_DRV(EVDI_REQUEST_UPDATE, evdi_painter_request_update_ioctl, DRM_UNLOCKED),
-    DRM_IOCTL_DEF_DRV(EVDI_GRABPIX, evdi_painter_grabpix_ioctl, DRM_UNLOCKED),
-    DRM_IOCTL_DEF_DRV(EVDI_DDCCI_RESPONSE, evdi_painter_ddcci_response_ioctl, DRM_UNLOCKED),
-    DRM_IOCTL_DEF_DRV(EVDI_ENABLE_CURSOR_EVENTS, evdi_painter_enable_cursor_events_ioctl, DRM_UNLOCKED),
+    DRM_IOCTL_DEF_DRV(EVDI_CONNECT, evdi_painter_connect_ioctl, DRM_RENDER_ALLOW),
+    DRM_IOCTL_DEF_DRV(EVDI_REQUEST_UPDATE, evdi_painter_request_update_ioctl, DRM_RENDER_ALLOW),
+    DRM_IOCTL_DEF_DRV(EVDI_GRABPIX, evdi_painter_grabpix_ioctl, DRM_RENDER_ALLOW),
+    DRM_IOCTL_DEF_DRV(EVDI_DDCCI_RESPONSE, evdi_painter_ddcci_response_ioctl, DRM_RENDER_ALLOW),
+    DRM_IOCTL_DEF_DRV(EVDI_ENABLE_CURSOR_EVENTS, evdi_painter_enable_cursor_events_ioctl, DRM_RENDER_ALLOW),
 };
 
 #if KERNEL_VERSION(5, 11, 0) <= LINUX_VERSION_CODE || defined(EL8)
@@ -44,7 +44,7 @@ static const struct vm_operations_struct evdi_gem_vm_ops = {
 };
 #endif
 
-static const struct file_operations evdi_driver_fops = {
+static struct file_operations evdi_driver_fops = {
     .owner = THIS_MODULE,
     .open = drm_open,
     .mmap = evdi_drm_gem_mmap,
@@ -84,61 +84,9 @@ static struct drm_driver driver = {
     .patchlevel = DRIVER_PATCH,
 };
 
-static int evdi_driver_setup(struct drm_device *dev)
-{
-    struct evdi_device *evdi;
-    int ret;
-
-    EVDI_CHECKPT();
-    evdi = kzalloc(sizeof(struct evdi_device), GFP_KERNEL);
-    if (!evdi)
-        return -ENOMEM;
-
-    evdi->ddev = dev;
-    dev->dev_private = evdi;
-    evdi->dev_index = dev->primary->index;
-
-    evdi->cursor_events_enabled = false;
-    ret = evdi_cursor_init(&evdi->cursor);
-    if (ret)
-        goto err_free;
-
-    EVDI_CHECKPT();
-    evdi_modeset_init(dev);
-
-#ifdef CONFIG_FB
-    ret = evdi_fbdev_init(dev);
-    if (ret)
-        goto err_cursor;
-#endif /* CONFIG_FB */
-
-    ret = drm_vblank_init(dev, 1);
-    if (ret)
-        goto err_fb;
-
-    ret = evdi_painter_init(evdi);
-    if (ret)
-        goto err_fb;
-
-    drm_kms_helper_poll_init(dev);
-
-    return 0;
-
-err_fb:
-#ifdef CONFIG_FB
-    evdi_fbdev_cleanup(dev);
-err_cursor:
-#endif /* CONFIG_FB */
-    evdi_cursor_free(evdi->cursor);
-err_free:
-    EVDI_ERROR("Failed to setup drm device %d\n", ret);
-    kfree(evdi);
-    return ret;
-}
-
 void evdi_driver_unload(struct drm_device *dev)
 {
-    struct evdi_device *evdi = dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(dev);
 
     EVDI_CHECKPT();
 
@@ -152,7 +100,7 @@ void evdi_driver_unload(struct drm_device *dev)
 
     evdi_painter_cleanup(evdi->painter);
 #ifdef CONFIG_FB
-    evdi_fbdev_cleanup(dev);
+    evdi_fbdev_cleanup(evdi);
 #endif /* CONFIG_FB */
     evdi_modeset_cleanup(dev);
 
@@ -161,7 +109,7 @@ void evdi_driver_unload(struct drm_device *dev)
 
 int evdi_driver_open(struct drm_device *drm_dev, __always_unused struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
     char buf[100];
 
     evdi_log_process(buf, sizeof(buf));
@@ -171,7 +119,7 @@ int evdi_driver_open(struct drm_device *drm_dev, __always_unused struct drm_file
 
 static void evdi_driver_close(struct drm_device *drm_dev, struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
 
     EVDI_CHECKPT();
     if (evdi)
@@ -185,7 +133,7 @@ void evdi_driver_preclose(struct drm_device *drm_dev, struct drm_file *file)
 
 void evdi_driver_postclose(struct drm_device *drm_dev, struct drm_file *file)
 {
-    struct evdi_device *evdi = drm_dev->dev_private;
+    struct evdi_device *evdi = dev_to_evdi(drm_dev);
     char buf[100];
 
     evdi_log_process(buf, sizeof(buf));
@@ -194,27 +142,57 @@ void evdi_driver_postclose(struct drm_device *drm_dev, struct drm_file *file)
     evdi_driver_close(drm_dev, file);
 }
 
-struct drm_device *evdi_drm_device_create(struct device *parent)
+struct evdi_device *evdi_drm_device_create(struct device *parent)
 {
-    struct drm_device *dev = NULL;
+    struct evdi_device *evdi;
     int ret;
 
-    dev = drm_dev_alloc(&driver, parent);
-    if (IS_ERR(dev))
-        return dev;
+    evdi = devm_drm_dev_alloc(parent, &driver, struct evdi_device, ddev);
+    if (IS_ERR(evdi))
+        return evdi;
 
-    ret = evdi_driver_setup(dev);
+    evdi->dev_index = evdi->ddev.primary->index;
+    evdi->cursor_events_enabled = false;
+
+    ret = evdi_cursor_init(&evdi->cursor);
     if (ret)
         goto err_free;
 
-    ret = drm_dev_register(dev, 0);
+    EVDI_CHECKPT();
+    evdi_modeset_init(evdi);
+
+#ifdef CONFIG_FB
+    ret = evdi_fbdev_init(evdi);
+    if (ret)
+        goto err_cursor;
+#endif /* CONFIG_FB */
+
+    ret = drm_vblank_init(&evdi->ddev, 1);
+    if (ret)
+        goto err_fb;
+
+    ret = evdi_painter_init(evdi);
+    if (ret)
+        goto err_fb;
+
+    drm_kms_helper_poll_init(&evdi->ddev);
+
+    ret = drm_dev_register(&evdi->ddev, 0);
     if (ret)
         goto err_free;
 
-    return dev;
+    return evdi;
 
+err_fb:
+#ifdef CONFIG_FB
+    evdi_fbdev_cleanup(evdi);
+err_cursor:
+#endif /* CONFIG_FB */
+    evdi_cursor_free(evdi->cursor);
 err_free:
-    drm_dev_put(dev);
+    EVDI_ERROR("Failed to setup drm device %d\n", ret);
+    kfree(evdi);
+
     return ERR_PTR(ret);
 }
 

@@ -418,7 +418,7 @@ static int open_device(int device)
     snprintf(dev, PATH_MAX, "/dev/dri/card%d", device);
 
 #ifndef CHROMEOS
-    wait_for_master(dev);
+    //wait_for_master(dev);
 #endif
 
     fd = wait_for_device(dev);

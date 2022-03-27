@@ -21,13 +21,6 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 
-/* dummy encoder */
-static void evdi_enc_destroy(struct drm_encoder *encoder)
-{
-    drm_encoder_cleanup(encoder);
-    kfree(encoder);
-}
-
 static void evdi_encoder_enable(__always_unused struct drm_encoder *encoder)
 {
 }
@@ -38,11 +31,18 @@ static void evdi_encoder_disable(__always_unused struct drm_encoder *encoder)
 
 static const struct drm_encoder_helper_funcs evdi_enc_helper_funcs = { .enable = evdi_encoder_enable, .disable = evdi_encoder_disable };
 
+/* dummy encoder */
+static void evdi_enc_destroy(struct drm_encoder *encoder)
+{
+    drm_encoder_cleanup(encoder);
+    kfree(encoder);
+}
+
 static const struct drm_encoder_funcs evdi_enc_funcs = {
     .destroy = evdi_enc_destroy,
 };
 
-struct drm_encoder *evdi_encoder_init(struct drm_device *dev)
+struct drm_encoder *evdi_encoder_init(struct evdi_device *dev)
 {
     struct drm_encoder *encoder;
     int ret = 0;
@@ -51,7 +51,12 @@ struct drm_encoder *evdi_encoder_init(struct drm_device *dev)
     if (!encoder)
         goto err;
 
-    ret = drm_encoder_init(dev, encoder, &evdi_enc_funcs, DRM_MODE_ENCODER_TMDS, dev_name(dev->dev));
+    encoder->possible_crtcs = 1;
+    // Drivers must initialize the struct drm_encoder possible_crtcs and possible_clones fields before registering the encoder.
+    // Both fields are bitmasks of respectively the CRTCs that the encoder can be connected to, and sibling encoders candidate for cloning.
+    encoder->possible_clones = 1;
+
+    ret = drm_encoder_init(&dev->ddev, encoder, &evdi_enc_funcs, DRM_MODE_ENCODER_VIRTUAL, "%s", dev_name(dev->ddev.dev));
     if (ret)
     {
         EVDI_ERROR("Failed to initialize encoder: %d\n", ret);
@@ -60,7 +65,6 @@ struct drm_encoder *evdi_encoder_init(struct drm_device *dev)
 
     drm_encoder_helper_add(encoder, &evdi_enc_helper_funcs);
 
-    encoder->possible_crtcs = 1;
     return encoder;
 
 err_encoder:

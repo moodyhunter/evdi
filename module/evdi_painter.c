@@ -177,6 +177,7 @@ static int copy_primary_pixels(struct evdi_framebuffer *efb, char __user *buffer
     struct drm_framebuffer *fb = &efb->base;
     struct drm_clip_rect *r;
 
+    pr_warn("moody: copy_primary_pixels.");
     EVDI_CHECKPT();
 
     for (r = rects; r != rects + num_rects; ++r)
@@ -236,6 +237,7 @@ static void copy_cursor_pixels(struct evdi_framebuffer *efb, char __user *buffer
 
 bool evdi_painter_is_connected(struct evdi_painter *painter)
 {
+    pr_warn("moody: evdi_painter_is_connected called.");
     return painter ? painter->is_connected : false;
 }
 
@@ -243,6 +245,7 @@ u8 *evdi_painter_get_edid_copy(struct evdi_device *evdi)
 {
     u8 *block = NULL;
 
+    pr_warn("moody: evdi_painter_get_edid_copy called.");
     EVDI_CHECKPT();
 
     painter_lock(evdi->painter);
@@ -772,8 +775,7 @@ static void evdi_painter_events_cleanup(struct evdi_painter *painter)
 
 static void evdi_add_i2c_adapter(struct evdi_device *evdi)
 {
-    struct drm_device *ddev = evdi->ddev;
-    struct platform_device *platdev = to_platform_device(ddev->dev);
+    struct platform_device *platdev = to_platform_device(evdi->ddev.dev);
     int result = 0;
 
     evdi->i2c_adapter = kzalloc(sizeof(*evdi->i2c_adapter), GFP_KERNEL);
@@ -784,7 +786,7 @@ static void evdi_add_i2c_adapter(struct evdi_device *evdi)
         return;
     }
 
-    result = evdi_i2c_add(evdi->i2c_adapter, &platdev->dev, ddev->dev_private);
+    result = evdi_i2c_add(evdi->i2c_adapter, &platdev->dev, evdi);
 
     if (result)
     {
@@ -881,7 +883,7 @@ static int evdi_painter_connect(struct evdi_device *evdi, void const __user *edi
 
     EVDI_INFO("(card%d) Connected with %s\n", evdi->dev_index, buf);
 
-    drm_helper_hpd_irq_event(evdi->ddev);
+    drm_helper_hpd_irq_event(&evdi->ddev);
 
     return 0;
 }
@@ -933,7 +935,7 @@ static int evdi_painter_disconnect(struct evdi_device *evdi, struct drm_file *fi
     // Signal anything waiting for ddc/ci response with NULL buffer
     complete(&painter->ddcci_response_received);
 
-    drm_helper_hpd_irq_event(evdi->ddev);
+    drm_helper_hpd_irq_event(&evdi->ddev);
     return 0;
 }
 
@@ -1155,7 +1157,7 @@ int evdi_painter_init(struct evdi_device *dev)
         dev->painter->needs_full_modeset = true;
         dev->painter->crtc = NULL;
         dev->painter->vblank = NULL;
-        dev->painter->drm_device = dev->ddev;
+        dev->painter->drm_device = &dev->ddev;
         INIT_LIST_HEAD(&dev->painter->pending_events);
         INIT_DELAYED_WORK(&dev->painter->send_events_work, evdi_send_events_work);
         init_completion(&dev->painter->ddcci_response_received);
